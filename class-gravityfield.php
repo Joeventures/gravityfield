@@ -90,7 +90,7 @@ if ( class_exists( "GFForms" ) ) {
 		/**
 		 * Get an array of fields in a table
 		 *
-		 * @param $table The name of the table
+		 * @param $table string name of the table
 		 *
 		 * @return array
 		 */
@@ -163,13 +163,40 @@ if ( class_exists( "GFForms" ) ) {
 					'name'   => 'tableName',
 					'fields' => array(
 						array(
+							'label'      => 'Feed Type',
+							'type'       => 'radio',
+							'name'       => 'feed_type',
+							'onchange'   => 'jQuery(this).parents("form").submit();',
+							'horizontal' => true,
+							'choices'    => array(
+								array(
+									'name'    => 'create',
+									'tooltip' => 'Each form entry will create a new record',
+									'label'   => 'Create',
+									'value'   => 'create'
+								),
+								array(
+									'name'    => 'update',
+									'tooltip' => 'Each form entry will update an existing record, or create a new record if a match does not exist',
+									'label'   => 'Update',
+									'value'   => 'update'
+								),
+								array(
+									'name'    => 'link',
+									'tooltip' => 'Each form entry will create a record linked to a record in another table',
+									'label'   => 'Create Linked',
+									'value'   => 'link'
+								)
+							)
+						),
+						array(
 							'label'    => 'Table Name',
 							'type'     => 'fieldbook_list',
 							'name'     => 'table_name',
 							'tooltip'  => 'Select the FieldBook Table',
 							'choices'  => $choices,
 							'required' => true
-						),
+						)
 					),
 				),
 				array(
@@ -192,6 +219,22 @@ if ( class_exists( "GFForms" ) ) {
 							'label'          => 'Create Condition',
 							'checkbox_label' => 'Enable Condition',
 							'instructions'   => 'Create a new record if'
+						),
+					),
+				),
+				array(
+					'title'       => 'Matching Field Criteria',
+					'description' => 'Map the fields that should match an existing record.',
+					'dependency'  => array(
+						'field'  => 'feed_type',
+						'values' => array( 'update' )
+					),
+					'fields'      => array(
+						array(
+							'name'      => 'matching_fields',
+							'label'     => 'Matching Fields',
+							'type'      => 'field_map',
+							'field_map' => $this->map_fields()
 						),
 					),
 				),
@@ -249,9 +292,10 @@ if ( class_exists( "GFForms" ) ) {
 		 * @param $form
 		 */
 		public function process_feed( $feed, $entry, $form ) {
-			$fields = $this->get_field_map_fields( $feed, 'mapped_fields' );
+			$mapped_fields = $this->get_field_map_fields( $feed, 'mapped_fields' );
+			$data = array();
 
-			foreach ( $fields as $name => $field_id ) {
+			foreach ( $mapped_fields as $name => $field_id ) {
 				if ( empty( $field_id ) ) {
 					continue;
 				}
@@ -264,8 +308,15 @@ if ( class_exists( "GFForms" ) ) {
 				'book_id'    => $this->book_id,
 				'table'      => $feed['meta']['table_name']
 			);
-			$fb = new PhieldBook( $fb_connect );
-			$fb->create( $data );
+			$fb         = new PhieldBook( $fb_connect );
+
+			$feed_type = $this->get_field_value( $form, $entry, 'feed_type' );
+
+			if ( 'create' == $feed_type ) {
+				$fb->create( $data );
+			} elseif ( 'update' == $feed_type ) {
+				#do stuff here
+			}
 		}
 	}
 
