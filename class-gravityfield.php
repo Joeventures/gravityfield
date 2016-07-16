@@ -238,6 +238,7 @@ if ( class_exists( "GFForms" ) ) {
 						),
 					),
 				),
+				array('title' => '', 'fields' => array())
 			);
 		}
 
@@ -308,14 +309,33 @@ if ( class_exists( "GFForms" ) ) {
 				'book_id'    => $this->book_id,
 				'table'      => $feed['meta']['table_name']
 			);
-			$fb         = new PhieldBook( $fb_connect );
-
-			$feed_type = $this->get_field_value( $form, $entry, 'feed_type' );
-
+			$fb = new PhieldBook( $fb_connect );
+			$feed_type = $feed['meta']['feed_type'];
 			if ( 'create' == $feed_type ) {
 				$fb->create( $data );
 			} elseif ( 'update' == $feed_type ) {
-				#do stuff here
+				// Find a matching record
+				$matching_fields = $this->get_field_map_fields( $feed, 'matching_fields' );
+				$matching_data = array();
+
+				foreach($matching_fields as $name => $field_id ) {
+					if( empty($field_id)) continue;
+					$matching_data[$name] = $this->get_field_value($form, $entry, $field_id);
+				}
+
+				$fb_search = new PhieldBook($fb_connect);
+				$update_id = $fb_search->search($matching_data);
+
+				if(0 != count($update_id)) {
+					// If there is a matching record, update it.
+					$update_id               = $update_id[0]['id'];
+					$fb_connect['record_id'] = $update_id;
+					$fb_update               = new PhieldBook( $fb_connect );
+					$fb_update->update( $data );
+				} else {
+					// Otherwise, create a new record
+					$fb->create($data);
+				}
 			}
 		}
 	}
