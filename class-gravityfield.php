@@ -267,7 +267,8 @@ if ( class_exists( "GFForms" ) ) {
 		 */
 		public function feed_list_columns() {
 			return array(
-				'table_name' => 'Table Name'
+				'table_name' => 'Table Name',
+				'feed_type' => 'Feed Type'
 			);
 		}
 
@@ -280,6 +281,10 @@ if ( class_exists( "GFForms" ) ) {
 		 */
 		public function get_column_value_table_name( $feed ) {
 			return '<b>' . ucfirst( rgars( $feed, 'meta/table_name' ) ) . '</b>';
+		}
+
+		public function get_column_value_feed_type( $feed ) {
+			return ucfirst(rgars($feed, 'meta/feed_type'));
 		}
 
 		/**
