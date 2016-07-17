@@ -248,13 +248,7 @@ if ( class_exists( "GFForms" ) ) {
 		 * @param $field
 		 */
 		public function settings_fieldbook_list( $field ) {
-			$tables    = $this->get_tables();
-			$choices[] = array( 'label' => 'Select a FieldBook Table', 'value' => '' );
-			foreach ( $tables as $table ) {
-				$choices[] = array( 'label' => ucwords( $table ), 'value' => $table );
-			}
 			$field['type']     = 'select';
-			$field['choices']  = $choices;
 			$field['onchange'] = 'jQuery(this).parents("form").submit();';
 			$html              = $this->settings_select( $field, false );
 			echo $html;
