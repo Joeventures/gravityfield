@@ -426,7 +426,7 @@ if ( class_exists( "GFForms" ) ) {
 
 		public function feeds_choices( $skip = null ) {
 			$feeds   = $this->get_feeds( rgget( 'id' ) );
-			$choices = array();
+			$choices = array( array( 'label' => 'Select a Feed', 'value' => '' ) );
 			foreach ( $feeds as $feed ) {
 				$feed_type  = $feed['meta']['feed_type'];
 				$feed_table = $feed['meta']['table_name'];
@@ -494,7 +494,6 @@ if ( class_exists( "GFForms" ) ) {
 				'name'       => 'table_name',
 				'tooltip'    => 'Select the Fieldbook Table',
 				'choices'    => $choices,
-				'required'   => true,
 				'dependency' => 'feed_type'
 			);
 		}
@@ -555,10 +554,11 @@ if ( class_exists( "GFForms" ) ) {
 
 		public function do_field_key_field() {
 			return array(
-				'name'    => 'key_field',
-				'label'   => 'Key Field',
-				'type'    => 'select',
-				'choices' => $this->feed_fields_choices()
+				'name'       => 'key_field',
+				'label'      => 'Key Field',
+				'type'       => 'select',
+				'dependency' => 'primary_feed',
+				'choices'    => $this->feed_fields_choices()
 			);
 		}
 	}
