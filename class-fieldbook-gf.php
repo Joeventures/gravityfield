@@ -415,6 +415,20 @@ if ( class_exists( "GFForms" ) ) {
 			}
 		}
 
+		/**
+		 * Checks to see if the current feed has a link feed pointing to it
+		 */
+		public function is_linked() {
+			$feeds = $this->get_feeds( rgget( 'id' ) );
+			foreach ( $feeds as $feed ) {
+				if ( $feed['meta']['feed_type'] == 'link' && $_GET['fid'] == $feed['meta']['primary_feed'] ) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		/****************** PROCESS FEED END ******************/
 
 		public function is_other_feeds_exist() {
