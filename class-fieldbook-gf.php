@@ -265,7 +265,7 @@ if ( class_exists( "GFForms" ) ) {
 					'dependency'  => array( $this, 'check_linked_field_dependency' ),
 					'fields'      => array(
 						$this->do_field_primary_feed(),
-						$this->do_field_key_field()
+						//$this->do_field_key_field()
 					),
 				),
 				array( 'title' => '', 'fields' => array() )
@@ -561,7 +561,7 @@ if ( class_exists( "GFForms" ) ) {
 				'name'     => 'primary_feed',
 				'label'    => 'Primary Feed',
 				'type'     => 'select',
-				'onchange' => 'jQuery(this).parents("form").submit();',
+//				'onchange' => 'jQuery(this).parents("form").submit();',
 				'choices'  => $this->feeds_choices( 'link' )
 			);
 		}
