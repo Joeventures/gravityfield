@@ -19,11 +19,14 @@ if ( class_exists( "GFForms" ) ) {
 		private $api_secret;
 		private $book_id;
 
+		private $all_tables;
+
 		function __construct() {
 			parent::__construct();
 			$this->api_key    = $this->get_plugin_setting( 'api_key' );
 			$this->api_secret = $this->get_plugin_setting( 'api_secret' );
 			$this->book_id    = $this->book_url_to_id();
+			$this->all_tables = $this->get_tables();
 		}
 
 		public static function get_instance() {
@@ -77,7 +80,7 @@ if ( class_exists( "GFForms" ) ) {
 						),
 						array(
 							'name'       => 'book_id',
-							'label'      => 'Base API URL', // Todo: allow Base API URL
+							'label'      => 'Base API URL',
 							'type'       => 'text',
 							'input_type' => 'text',
 							'class'      => 'medium',
@@ -230,6 +233,7 @@ if ( class_exists( "GFForms" ) ) {
 		 * @return array
 		 */
 		public function feed_settings_fields() {
+			echo '<pre>'.print_r(self::get_field_map_choices(1),true).'</pre>';
 			return array(
 				array(
 					// SECTION 1
@@ -259,13 +263,14 @@ if ( class_exists( "GFForms" ) ) {
 					),
 				),
 				array(
-					// SECTION 4 ( dependency: feed_type link )
+					// SECTION 4
 					'title'       => 'Link Info',
 					'description' => 'Specify the feed and field information.',
-					'dependency'  => array( $this, 'check_linked_field_dependency' ),
+					'dependency'  => 'table_name',
 					'fields'      => array(
-						$this->do_field_primary_feed(),
-						//$this->do_field_key_field()
+						$this->do_field_linked_table(),
+						$this->do_field_key_field(),
+						$this->do_field_form_key_field()
 					),
 				),
 				array( 'title' => '', 'fields' => array() )
@@ -341,6 +346,27 @@ if ( class_exists( "GFForms" ) ) {
 		 * @param $form
 		 */
 		public function process_feed( $feed, $entry, $form ) {
+
+			echo '<pre>' . "FEED:\n" . print_r($feed,true) . '</pre>';
+			echo '<pre>' . "ENTRY:\n" . print_r($entry,true) . '</pre>';
+			echo '<pre>' . "FORM:\n" . print_r($form,true) . '</pre>';
+			return;
+
+			$feed_type = $feed['meta']['feed_type'];
+			$data = array();
+			if($feed_type == 'create' ) {
+				// gather the data, then
+				$this->process_create($data);
+			} elseif($feed_type == 'update' ) {
+				//gather the data, then
+				$this->process_update($data);
+			}
+
+			// First, check the feed type.
+			// If it's a create/update, check whether another feed links to it
+			// If it's create/update and linked, skip this process and move on
+			// If it's link, use $this->is_feed_condition_met( $feed, $form, $entry ) to determine whether to skip
+
 			$mapped_fields = $this->get_field_map_fields( $feed, 'mapped_fields' );
 			$data          = array();
 
@@ -360,7 +386,7 @@ if ( class_exists( "GFForms" ) ) {
 			$fb         = new PhieldBook( $fb_connect );
 			$feed_type  = $feed['meta']['feed_type'];
 			if ( 'create' == $feed_type ) {
-				$fb->create( $data );
+				//$fb->create( $data );
 			} elseif ( 'update' == $feed_type ) {
 				// Find a matching record
 				$matching_fields = $this->get_field_map_fields( $feed, 'matching_fields' );
@@ -381,10 +407,10 @@ if ( class_exists( "GFForms" ) ) {
 					$update_id               = $update_id[0]['id'];
 					$fb_connect['record_id'] = $update_id;
 					$fb_update               = new PhieldBook( $fb_connect );
-					$fb_update->update( $data );
+					//$fb_update->update( $data );
 				} else {
 					// Otherwise, create a new record
-					$fb->create( $data );
+					//$fb->create( $data );
 				}
 			} elseif ( 'link' == $feed_type ) {
 				// Todo dry out the code
@@ -410,18 +436,30 @@ if ( class_exists( "GFForms" ) ) {
 					$data[ $linked_table ] = array( array( 'id' => $link_id ) );
 				}
 
-				$doit = $fb->create( $data );
+				//$doit = $fb->create( $data );
 				echo '<pre>' . json_encode( $data ) . '</pre>';
 			}
+		}
+
+		public function process_update($data) {
+
+		}
+
+		public function process_create($data) {
+
+		}
+
+		public function process_link($data) {
+
 		}
 
 		/**
 		 * Checks to see if the current feed has a link feed pointing to it
 		 */
-		public function is_linked() {
+		public function is_linked($feed_id) {
 			$feeds = $this->get_feeds( rgget( 'id' ) );
 			foreach ( $feeds as $feed ) {
-				if ( $feed['meta']['feed_type'] == 'link' && $_GET['fid'] == $feed['meta']['primary_feed'] ) {
+				if ( $feed['meta']['feed_type'] == 'link' && $feed_id == $feed['meta']['primary_feed'] ) {
 					return true;
 				}
 			}
@@ -474,16 +512,6 @@ if ( class_exists( "GFForms" ) ) {
 				'value'   => 'update',
 				'tooltip' => 'Each form entry will update an existing record, or create a new record if a match does not exist'
 			);
-
-			if ( $this->is_other_feeds_exist() ) {
-				$choices[] = array(
-					'label'   => 'Link',
-					'name'    => 'link',
-					'value'   => 'link',
-					'tooltip' => 'Each form entry will update an existing record in a linked table, or create a new record if a match does not exist'
-				);
-			}
-
 			return array(
 				'label'      => 'Feed Type',
 				'type'       => 'radio',
@@ -495,7 +523,7 @@ if ( class_exists( "GFForms" ) ) {
 		}
 
 		public function do_field_table_name() {
-			$tables    = $this->get_tables();
+			$tables    = $this->all_tables;
 			$choices[] = array( 'label' => 'Select a Fieldbook Table', 'value' => '' );
 			foreach ( $tables as $table ) {
 				$choices[] = array( 'label' => ucwords( $table ), 'value' => $table );
@@ -543,7 +571,8 @@ if ( class_exists( "GFForms" ) ) {
 				'name'           => 'createcondition',
 				'label'          => 'Create Condition',
 				'checkbox_label' => 'Enable Condition',
-				'instructions'   => 'Create a new record if'
+				'instructions'   => 'Create a new record if',
+				'dependency'     => $this->get_setting( 'feed_type' ) == 'link'
 			);
 		}
 
@@ -556,23 +585,47 @@ if ( class_exists( "GFForms" ) ) {
 			);
 		}
 
-		public function do_field_primary_feed() {
+		public function do_field_linked_table() {
+			$tables    = $this->all_tables;
+			$choices[] = array( 'label' => 'Select a Fieldbook Table', 'value' => '' );
+			foreach ( $tables as $table ) {
+				$choices[] = array( 'label' => ucwords( $table ), 'value' => $table );
+			}
+
 			return array(
-				'name'     => 'primary_feed',
-				'label'    => 'Primary Feed',
+				'name'     => 'linked_table',
+				'label'    => 'Linked Table',
 				'type'     => 'select',
-//				'onchange' => 'jQuery(this).parents("form").submit();',
-				'choices'  => $this->feeds_choices( 'link' )
+				'tooltip' => 'Select a linked table, if applicable',
+				'onchange' => 'jQuery(this).parents("form").submit();',
+				'choices'  => $choices
 			);
 		}
 
 		public function do_field_key_field() {
+			$table_name = $this->get_setting('linked_table');
+
+			$choices[] = array('label' => 'Select a Fieldbook Field', 'value' => '');
+			foreach($this->get_fields($table_name) as $field) {
+				$choices[] = array('value' => $field, 'label' => ucwords($field));
+			}
 			return array(
-				'name'       => 'key_field',
-				'label'      => 'Key Field',
+				'name'       => 'key_field_primary',
+				'label'      => 'Key Field in Table',
 				'type'       => 'select',
-				'dependency' => 'primary_feed',
-				'choices'    => $this->feed_fields_choices()
+				'dependency' => 'linked_table',
+				'choices'    => $choices
+			);
+		}
+
+		public function do_field_form_key_field() {
+			$choices = self::get_field_map_choices(1);
+			return array(
+				'name' => 'form_key_field',
+				'label' => 'Key Field in Form',
+				'type' => 'select',
+				'dependency' => 'linked_table',
+				'choices' => $choices
 			);
 		}
 	}
