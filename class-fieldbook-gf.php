@@ -233,7 +233,6 @@ if ( class_exists( "GFForms" ) ) {
 		 * @return array
 		 */
 		public function feed_settings_fields() {
-			echo '<pre>'.print_r(self::get_field_map_choices(1),true).'</pre>';
 			return array(
 				array(
 					// SECTION 1
@@ -619,7 +618,7 @@ if ( class_exists( "GFForms" ) ) {
 		}
 
 		public function do_field_form_key_field() {
-			$choices = self::get_field_map_choices(1);
+			$choices = self::get_field_map_choices(rgget( 'id' ));
 			return array(
 				'name' => 'form_key_field',
 				'label' => 'Key Field in Form',
